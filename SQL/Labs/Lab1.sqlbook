@@ -1,0 +1,184 @@
+-- SQLBook: Code
+--Zad 1
+SHOW TABLES; --23 rows
+-- SQLBook: Code
+--Zad 2
+SELECT title FROM film WHERE length > 120; --457 rows 
+-- SQLBook: Code
+--Zad 3
+SELECT title FROM film WHERE rating LIKE 'PG-13' 
+ORDER BY length ASC LIMIT 4; --4 rows
+-- SQLBook: Code
+--Zad 4
+SELECT title, name AS language FROM film JOIN language
+USING (language_id) WHERE description LIKE '%Drama%'; --106 rows
+-- SQLBook: Code
+--Zad 5
+SELECT title FROM film JOIN film_category USING (film_id)
+JOIN category USING (category_id) WHERE name = 'Family'
+AND description LIKE '%Documentary%'; --6rows
+-- SQLBook: Code
+--Zad 6
+SELECT title FROM film JOIN film_category USING (film_id) JOIN category
+USING (category_id) WHERE name = 'Children' AND rating != 'PG-13'; --46 rows
+-- SQLBook: Code
+--Zad 7
+SELECT rating, COUNT (title) AS no_films FROM film
+GROUP BY rating ORDER BY no_films DESC; --5 rows
+-- SQLBook: Code
+--Zad 8
+SELECT DISTINCT title FROM film JOIN inventory USING (film_id)
+JOIN rental USING (INVENTORY_ID) WHERE rental_date
+BETWEEN '2005-05-31' AND '2005-06-30' ORDER BY title DESC; --900 rows
+-- SQLBook: Code
+--Zad 9
+SELECT CONCAT (first_name, ' ', last_name) AS full_name FROM actor
+JOIN film_actor USING (actor_id) JOIN film USING (film_id)
+WHERE special_features LIKE '%Deleted Scenes%' GROUP BY actor_id
+ORDER BY full_name ASC; --200 rows
+-- SQLBook: Code
+--Zad 9 (different version)
+SELECT full_name FROM (SELECT DISTINCT CONCAT (first_name, ' ', last_name)
+AS full_name, actor_id FROM actor JOIN film_actor USING (actor_id)
+JOIN film USING (film_id) WHERE special_features LIKE '%Deleted Scenes%')
+AS subquery ORDER BY full_name ASC; --200 rows
+-- SQLBook: Code
+--Zad 10
+SELECT CONCAT(first_name, ' ',last_name) AS full_name FROM payment AS p
+JOIN customer USING (customer_id) JOIN rental AS r USING (customer_id)
+WHERE p.staff_id != r.staff_id GROUP BY customer_id; --599 rows
+-- SQLBook: Code
+--Zad 11
+SELECT full_name FROM (SELECT CONCAT(first_name, ' ', last_name)
+AS full_name, COUNT(customer_id) AS no_rentals FROM customer
+JOIN rental USING (customer_id) GROUP BY customer_id) AS sq1,
+(SELECT COUNT(*) AS val FROM customer JOIN rental USING (customer_id)
+WHERE email = 'MARY.SMITH@sakilacustomer.org') AS sq2
+WHERE no_rentals > val ORDER BY no_rentals DESC; --77rows
+-- SQLBook: Code
+--Zad 11v2
+
+SELECT CONCAT(first_name, ' ', last_name) AS full_name FROM customer
+JOIN rental USING (customer_id) GROUP BY customer_id HAVING COUNT(customer_id) > 
+(SELECT COUNT(*) FROM customer JOIN rental USING (customer_id)
+WHERE email = 'MARY.SMITH@sakilacustomer.org'); --77rows
+-- SQLBook: Code
+--Zad 11 (different version)
+CREATE TEMPORARY TABLE subquery (full_name VARCHAR(90), no_rentals INT, email VARCHAR(50));
+INSERT INTO subquery SELECT CONCAT(first_name, ' ', last_name) AS full_name, COUNT(customer_id) AS no_rentals, email FROM customer
+JOIN rental USING (customer_id) GROUP BY customer_id ORDER BY no_rentals DESC;
+SELECT full_name FROM subquery WHERE no_rentals > (SELECT no_rentals FROM subquery
+WHERE email = 'MARY.SMITH@sakilacustomer.org') ORDER BY no_rentals DESC; --77rows
+DROP TABLE subquery;
+-- SQLBook: Code
+--Zad 12
+SELECT CONCAT (fa.first_name, ' ', fa.last_name) AS fa_full_name,
+CONCAT (sa.first_name, ' ', sa.last_name) AS sa_full_name
+FROM actor AS fa JOIN film_actor fa1 USING (actor_id) JOIN film_actor
+AS fa2 USING (film_id) JOIN actor AS sa ON fa2.actor_id = sa.actor_id
+WHERE fa.actor_id < sa.actor_id GROUP BY fa.actor_id, sa.actor_id
+HAVING COUNT(sa.actor_id) >= 2; --3483 rows
+-- SQLBook: Code
+--Zad 12 (test)
+SELECT fa1.actor_id, film_id, fa2.actor_id
+FROM film_actor fa1
+JOIN film_actor fa2 USING (film_id)
+WHERE fa1.actor_id < fa2.actor_id
+GROUP BY fa1.actor_id, fa2.actor_id
+HAVING COUNT(fa1.film_id) >= 2; --3483 rows
+-- SQLBook: Code
+--Zad 13
+SELECT last_name FROM actor JOIN film_actor USING (actor_id)
+JOIN film USING (film_id) GROUP BY actor_id
+HAVING SUM (IF (title LIKE 'C%', 1, 0)) = 0 ORDER BY last_name; --13 rows
+-- SQLBook: Code
+--Zad 14 
+SELECT first_name, last_name FROM actor JOIN film_actor USING (actor_id)
+JOIN film_category USING (film_id) JOIN category USING (category_id)
+GROUP BY actor_id HAVING SUM (IF (name = 'Horror', 1, 0)) >
+SUM (IF (name = 'Action', 1, 0)) ORDER BY last_name ASC; --61 rows
+-- SQLBook: Code
+--Zad 14v2
+
+SELECT first_name, last_name FROM actor JOIN film_actor USING (actor_id)
+JOIN film_category USING (film_id) JOIN category AS c USING (category_id)
+GROUP BY actor_id HAVING SUM (IF(c.name = 'Horror', 1, IF (c.name = 'Action', -1, 0))) > 0 ORDER BY last_name ASC;
+-- SQLBook: Code
+--Zad 15
+SELECT CONCAT(first_name, ' ', last_name) AS full_name FROM customer JOIN payment
+USING (customer_id) GROUP BY customer_id HAVING AVG(amount) < (SELECT AVG(amount)
+AS avg_payment_that_day FROM payment WHERE payment_date LIKE '2005-07-30%'); --431 rows
+-- SQLBook: Code
+--Zad 16
+UPDATE film SET language_id = (SELECT language_id FROM language
+WHERE name = 'Italian') WHERE title = 'YOUNG LANGUAGE';
+-- SQLBook: Code
+--Zad 16 (test)
+CREATE TEMPORARY TABLE temp_film AS SELECT * FROM film;
+
+SELECT * FROM temp_film;
+
+UPDATE temp_film SET language_id = (SELECT language_id FROM temp_language WHERE name = 'Italian') WHERE title = 'YOUNG LANGUAGE';
+
+DROP TABLE temp_film;
+-- SQLBook: Code
+--Zad 17
+
+INSERT INTO language(language_id, name) SELECT
+MAX(language_id) + 1, 'Spanish';
+
+UPDATE film SET language_id = (SELECT language_id FROM language
+WHERE name = 'Spanish') WHERE film_id IN (SELECT film_id FROM actor
+JOIN film_actor USING(actor_id) JOIN film USING (film_id)
+WHERE first_name = 'ED' AND last_name = 'CHASE');
+-- SQLBook: Code
+--Zad 17 (test)
+SET SESSION sql_mode='NO_AUTO_VALUE_ON_ZERO';
+
+CREATE TEMPORARY TABLE temp_language AS SELECT * FROM language;
+CREATE TEMPORARY TABLE temp_film AS SELECT * FROM film;
+
+SELECT * FROM temp_language;
+SELECT * FROM temp_film;
+
+INSERT INTO temp_language (name) VALUES ('Spanish');
+INSERT INTO temp_language (language_id, name) SELECT
+MAX(language_id) + 1, 'Spanish' FROM language;
+
+UPDATE temp_film SET language_id = (SELECT language_id FROM temp_language
+WHERE name = 'Spanish') WHERE film_id IN (SELECT film_id FROM actor
+JOIN film_actor USING(actor_id) JOIN film USING (film_id)
+WHERE first_name = 'ED' AND last_name = 'CHASE');
+
+DROP TABLE temp_language;
+DROP TABLE temp_film;
+-- SQLBook: Code
+--Zad 18
+ALTER TABLE language ADD films_no INT DEFAULT (0);
+UPDATE language AS l SET films_no = (SELECT COUNT(f.film_id)
+FROM film AS f WHERE f.language_id = l.language_id);
+-- SQLBook: Code
+--Zad 18
+CREATE TEMPORARY TABLE temp_language AS SELECT * FROM language;
+CREATE TEMPORARY TABLE temp_film AS SELECT * FROM film;
+
+SELECT * FROM temp_language;
+
+ALTER TABLE temp_language ADD films_no INT DEFAULT (0);
+UPDATE temp_language AS l SET films_no = (SELECT COUNT(f.film_id)
+FROM temp_film AS f WHERE f.language_id = l.language_id);
+
+DROP TABLE temp_language;
+DROP TABLE temp_film;
+-- SQLBook: Code
+--Zad 19
+ALTER TABLE film DROP COLUMN release_year;
+-- SQLBook: Code
+-Zad 19 (test)
+CREATE TEMPORARY TABLE temp_film AS SELECT * FROM film;
+
+SELECT * FROM temp_film;
+
+ALTER TABLE temp_film DROP COLUMN release_year;
+
+DROP TABLE temp_film;
